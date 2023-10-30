@@ -68,17 +68,16 @@ public class FilesService : IFilesService
 
                 _appCache.Add(cacheKey, new UploadProgress()
                 {
-                    LastFileId = fileId,
+                    FileId = fileId,
                     GroupId = groupId,
-                    LastFileUploadProgress = fileUploadPercentage,
+                    FileUploadProgress = fileUploadPercentage,
                     GroupUploadProgress = groupUploadPercentage,
                 }, TimeSpan.FromMinutes(1));
             }
 
             await _applicationDbContext.Files.AddAsync(fileModel, cancellationToken);
+            await _applicationDbContext.SaveChangesAsync(cancellationToken);
         }
-
-        await _applicationDbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<UploadProgress> GetUploadProgress(string userId, CancellationToken cancellationToken)
