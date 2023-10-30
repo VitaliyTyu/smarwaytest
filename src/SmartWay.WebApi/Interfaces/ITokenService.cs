@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Identity;
-using SmartWay.WebApi.Entities;
 
 namespace SmartWay.WebApi.Interfaces;
 

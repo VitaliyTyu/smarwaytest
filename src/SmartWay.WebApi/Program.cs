@@ -13,7 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks().Services.AddHttpContextAccessor();
-builder.Services.AddSignalR();
+builder.Services.AddLazyCache();
 
 builder.Services.AddDAL(builder.Configuration);
 builder.Services.AddScoped<IFilesService, FilesService>();

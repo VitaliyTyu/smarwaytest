@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using SmartWay.WebApi.Entities;
+using SmartWay.WebApi.Data.Entities;
 
 namespace SmartWay.WebApi.Data.Configurations;
 

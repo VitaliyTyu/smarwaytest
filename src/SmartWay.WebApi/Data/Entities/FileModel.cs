@@ -1,4 +1,4 @@
-namespace SmartWay.WebApi.Entities;
+namespace SmartWay.WebApi.Data.Entities;
 
 public class FileModel
 {

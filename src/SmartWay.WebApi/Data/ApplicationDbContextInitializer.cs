@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using SmartWay.WebApi.Entities;
 
 namespace SmartWay.WebApi.Data;
 

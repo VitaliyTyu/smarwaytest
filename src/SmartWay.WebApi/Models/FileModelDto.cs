@@ -1,4 +1,4 @@
-namespace SmartWay.WebApi.DTO;
+namespace SmartWay.WebApi.Models;
 
 public class FileModelDto
 {

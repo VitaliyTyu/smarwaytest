@@ -218,7 +218,33 @@ namespace SmartWay.WebApi.Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("SmartWay.WebApi.Entities.FileModel", b =>
+            modelBuilder.Entity("SmartWay.WebApi.Data.Entities.DownloadLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("FileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("GroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DownloadLinks");
+                });
+
+            modelBuilder.Entity("SmartWay.WebApi.Data.Entities.FileModel", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()

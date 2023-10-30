@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using SmartWay.WebApi.DTO;
-using SmartWay.WebApi.Entities;
 using SmartWay.WebApi.Interfaces;
+using SmartWay.WebApi.Models;
 
 namespace SmartWay.WebApi.Controllers;
 

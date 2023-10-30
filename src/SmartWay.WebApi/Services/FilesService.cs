@@ -1,29 +1,35 @@
 using System.IO.Compression;
+using LazyCache;
 using Microsoft.EntityFrameworkCore;
-using SmartWay.WebApi.DTO;
-using SmartWay.WebApi.Entities;
+using SmartWay.WebApi.Data.Entities;
 using SmartWay.WebApi.Interfaces;
+using SmartWay.WebApi.Models;
 
 namespace SmartWay.WebApi.Services;
 
 public class FilesService : IFilesService
 {
     private readonly IApplicationDbContext _applicationDbContext;
+    private readonly IAppCache _appCache;
     private const string FolderPath = "files";
+    private const string CachePrefix = "uploadProgress_";
 
-    public FilesService(IApplicationDbContext applicationDbContext)
+    public FilesService(IApplicationDbContext applicationDbContext, IAppCache appCache)
     {
         _applicationDbContext = applicationDbContext;
+        _appCache = appCache;
     }
 
     public async Task UploadFiles(IList<IFormFile> files, string userId, CancellationToken cancellationToken)
     {
-        var totalSize = files.Sum(f => f.Length);
-        var bytesRead = 0;
+        var groupSizeInBytes = files.Sum(f => f.Length);
+        var groupBytesRead = 0;
         var groupId = Guid.NewGuid();
 
         foreach (var file in files)
         {
+            var fileSizeInBytes = file.Length;
+            var fileBytesRead = 0;
             var fileName = file.FileName;
 
             var directoryPath = Path.Combine(Directory.GetCurrentDirectory(), FolderPath);
@@ -32,10 +38,11 @@ public class FilesService : IFilesService
                 Directory.CreateDirectory(directoryPath);
 
             var filePath = Path.Combine(directoryPath, fileName);
+            var fileId = Guid.NewGuid();
 
             var fileModel = new FileModel()
             {
-                Id = Guid.NewGuid(),
+                Id = fileId,
                 Name = fileName,
                 Path = filePath,
                 UserId = userId,
@@ -51,17 +58,37 @@ public class FilesService : IFilesService
             while ((read = await readStream.ReadAsync(buffer)) > 0)
             {
                 await stream.WriteAsync(buffer, 0, read, cancellationToken: cancellationToken);
-                bytesRead += read;
+                groupBytesRead += read;
+                fileBytesRead += read;
 
-                var percentage = (int)((double)bytesRead / totalSize * 100);
+                var fileUploadPercentage = (int)((double)fileBytesRead / fileSizeInBytes * 100);
+                var groupUploadPercentage = (int)((double)groupBytesRead / groupSizeInBytes * 100);
+
+                var cacheKey = $"{CachePrefix}{userId}";
+
+                _appCache.Add(cacheKey, new UploadProgress()
+                {
+                    LastFileId = fileId,
+                    GroupId = groupId,
+                    LastFileUploadProgress = fileUploadPercentage,
+                    GroupUploadProgress = groupUploadPercentage,
+                }, TimeSpan.FromMinutes(1));
             }
 
-            _applicationDbContext.Files.Add(fileModel);
+            await _applicationDbContext.Files.AddAsync(fileModel, cancellationToken);
         }
 
         await _applicationDbContext.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<UploadProgress> GetUploadProgress(string userId, CancellationToken cancellationToken)
+    {
+        var cacheKey = $"{CachePrefix}{userId}";
+
+        var uploadProgress = await _appCache.GetAsync<UploadProgress>(cacheKey);
+
+        return uploadProgress;
+    }
 
     public async Task<List<FileModelDto>> GetAllFilesInfo(string userId, CancellationToken cancellationToken)
     {
@@ -107,6 +134,43 @@ public class FilesService : IFilesService
             .OrderBy(f => f.Name)
             .ToListAsync(cancellationToken);
 
+        var zipArchivePath = GenerateZipArchive(files);
+
+        return zipArchivePath;
+    }
+
+
+    public async Task SaveDownloadLink(DownloadLink downloadLink, CancellationToken cancellationToken)
+    {
+        await _applicationDbContext.DownloadLinks.AddAsync(downloadLink);
+
+        await _applicationDbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<string> GetFilesByLink(Guid linkId, CancellationToken cancellationToken)
+    {
+        var link = await _applicationDbContext.DownloadLinks
+            .AsNoTracking()
+            .Where(x => x.Id == linkId)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (link == null)
+            throw new ArgumentException("Link not found");
+
+        var files = await _applicationDbContext.Files
+            .AsNoTracking()
+            .Where(f => f.Id == link.FileId || f.GroupId == link.GroupId)
+            .OrderBy(f => f.Name)
+            .ToListAsync(cancellationToken);
+
+        var zipArchivePath = GenerateZipArchive(files);
+
+        return zipArchivePath;
+    }
+
+
+    private string GenerateZipArchive(List<FileModel> files)
+    {
         var zipArchiveName = $"{Guid.NewGuid().ToString()}.zip";
         var zipArchivePath = Path.Combine(FolderPath, zipArchiveName);
 
